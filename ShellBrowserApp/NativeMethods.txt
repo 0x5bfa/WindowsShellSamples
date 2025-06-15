@@ -221,3 +221,10 @@ SHChangeNotification_Lock
 SHChangeNotification_Unlock
 PostQuitMessage
 SHParseDisplayName
+IShellExtInit
+GetMenuItemCount
+GetSubMenu
+MENUITEMINFOW
+GetMenuItemInfo
+IContextMenu2
+IExecuteCommand

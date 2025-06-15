@@ -36,7 +36,7 @@ namespace ShellBrowserApp
 			var stopwatch = new Stopwatch();
 			stopwatch.Start();
 
-			EnumerateSearchFolder();
+			PinFolderToQuickAccess();
 
 			stopwatch.Stop();
 			Console.WriteLine();
@@ -392,6 +392,13 @@ namespace ShellBrowserApp
 
 				return PInvoke.DefWindowProc(hWnd, uMessage, wParam, lParam);
 			}
+		}
+
+		internal static void PinFolderToQuickAccess()
+		{
+			using ComPtr<IExecuteCommand> pExecuteCommand = default;
+
+			PInvoke.CoCreateInstance(CLSID.CLSID_PinToFrequentExecute, null, CLSCTX.CLSCTX_INPROC_SERVER, IID.IID_IExecuteCommand, (void**)pExecuteCommand.GetAddressOf());
 		}
 	}
 }

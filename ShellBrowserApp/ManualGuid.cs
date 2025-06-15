@@ -29,12 +29,21 @@ namespace Windows.Win32
 
 		[GuidRVAGen.Guid("B63EA76D-1F85-456F-A19C-48159EFA858B")]
 		public static partial Guid* IID_IShellItemArray { get; }
+
+		[GuidRVAGen.Guid("000214E6-0000-0000-C000-000000000046")]
+		public static partial Guid* IID_IShellFolder { get; }
+
+		[GuidRVAGen.Guid("7F9185B0-CB92-43C5-80A9-92277A4F7B54")]
+		public static partial Guid* IID_IExecuteCommand { get; }
 	}
 
 	public static unsafe partial class CLSID
 	{
 		[GuidRVAGen.Guid("3AD05575-8857-4850-9277-11B85BDB8E09")]
 		public static partial Guid* CLSID_FileOperation { get; }
+
+		[GuidRVAGen.Guid("B455F46E-E4AF-4035-B0A4-CF18D2F6F28E")]
+		public static partial Guid* CLSID_PinToFrequentExecute { get; }
 	}
 
 	public static unsafe partial class BHID

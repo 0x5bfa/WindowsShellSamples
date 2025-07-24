@@ -39,7 +39,7 @@ namespace ShellBrowserApp
 
 			PInvoke.CoInitializeEx(null, COINIT.COINIT_APARTMENTTHREADED);
 
-			ParseShellUrl();
+			EnumerateOpenWithMenuItems();
 
 			PInvoke.CoUninitialize();
 
@@ -482,8 +482,10 @@ namespace ShellBrowserApp
 				IID.IID_IShellExtInit,
 				(void**)pShellExtInit.GetAddressOf());
 
-			// The 2nd parameter cannot be null.
-			// The IDataObject instance has to indicate to an IShellItem (so can be obtained via SHGetItemFromDataObject)
+			//PInvoke.SHCreateDataObject();
+
+			// The 2nd parameter must not be null.
+			// The IDataObject instance must indicate to an IShellItem (so can be obtained via SHGetItemFromDataObject)
 			pShellExtInit.Get()->Initialize(null, null, HKEY.Null);
 		}
 	}

@@ -228,3 +228,9 @@ MENUITEMINFOW
 GetMenuItemInfo
 IContextMenu2
 IExecuteCommand
+IObjectWithSelection
+SHCreateShellItemArrayFromShellItem
+CoGetObject
+CoInitializeEx
+BIND_OPTS3
+ICancelMethodCalls

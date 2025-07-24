@@ -10,6 +10,7 @@ using Windows.Win32.Foundation;
 using Windows.Win32.Graphics.Gdi;
 using Windows.Win32.System.Com;
 using Windows.Win32.System.Ole;
+using Windows.Win32.System.Registry;
 using Windows.Win32.System.Search;
 using Windows.Win32.System.SystemServices;
 using Windows.Win32.UI.Shell;
@@ -36,7 +37,11 @@ namespace ShellBrowserApp
 			var stopwatch = new Stopwatch();
 			stopwatch.Start();
 
-			PinFolderToQuickAccess();
+			PInvoke.CoInitializeEx(null, COINIT.COINIT_APARTMENTTHREADED);
+
+			ParseShellUrl();
+
+			PInvoke.CoUninitialize();
 
 			stopwatch.Stop();
 			Console.WriteLine();
@@ -65,17 +70,29 @@ namespace ShellBrowserApp
 			List<string> Names = [];
 			int count = 0;
 
-			using ComPtr<IShellItem> pChildShellItem = default;
-			while (pEnumShellItems.Get()->Next(1, pChildShellItem.GetAddressOf()) == HRESULT.S_OK)
+			if (pEnumShellItems.IsNull)
 			{
-				PWSTR pName = default;
-				hr = pChildShellItem.Get()->GetDisplayName(SIGDN.SIGDN_PARENTRELATIVEFORUI, &pName);
+				using ComPtr<IShellFolder> pShellFolder = default;
+				using ComPtr<IEnumIDList> pEnumIDList = default;
 
-				SFGAO_FLAGS attributes = default;
-				pChildShellItem.Get()->GetAttributes(SFGAO_FLAGS.SFGAO_HIDDEN, &attributes);
-				Names.Add($"{pName} ({attributes})");
-				Console.WriteLine(pName);
-				count++;
+				pShellItem.Get()->BindToHandler(null, BHID.BHID_SFObject, IID.IID_IShellFolder, (void**)pShellFolder.GetAddressOf());
+
+				pShellFolder.Get()->EnumObjects(HWND.Null, 0, pEnumIDList.GetAddressOf());
+			}
+			else
+			{
+				using ComPtr<IShellItem> pChildShellItem = default;
+				while (pEnumShellItems.Get()->Next(1, pChildShellItem.GetAddressOf()) == HRESULT.S_OK)
+				{
+					PWSTR pName = default;
+					hr = pChildShellItem.Get()->GetDisplayName(SIGDN.SIGDN_PARENTRELATIVEFORUI, &pName);
+
+					SFGAO_FLAGS attributes = default;
+					pChildShellItem.Get()->GetAttributes(SFGAO_FLAGS.SFGAO_HIDDEN, &attributes);
+					Names.Add($"{pName} ({attributes})");
+					Console.WriteLine(pName);
+					count++;
+				}
 			}
 
 			Console.WriteLine();
@@ -396,9 +413,78 @@ namespace ShellBrowserApp
 
 		internal static void PinFolderToQuickAccess()
 		{
+			HRESULT hr = default;
+
 			using ComPtr<IExecuteCommand> pExecuteCommand = default;
+			using ComPtr<IObjectWithSelection> pObjectWithSelection = default;
+			Guid IID_IInitializeCommand = IObjectWithSelection.IID_Guid;
 
 			PInvoke.CoCreateInstance(CLSID.CLSID_PinToFrequentExecute, null, CLSCTX.CLSCTX_INPROC_SERVER, IID.IID_IExecuteCommand, (void**)pExecuteCommand.GetAddressOf());
+
+			using ComPtr<IShellItem> pShellItem = default;
+			fixed (char* pszPath = "D:\\Study\\Files-thesis")
+				hr = PInvoke.SHCreateItemFromParsingName(pszPath, null, IID.IID_IShellItem, (void**)pShellItem.GetAddressOf());
+
+			using ComPtr<IShellItemArray> pShellItemArray = default;
+			PInvoke.SHCreateShellItemArrayFromShellItem(pShellItem.Get(), IID.IID_IShellItemArray, (void**)pShellItemArray.GetAddressOf());
+
+			pExecuteCommand.Get()->QueryInterface(&IID_IInitializeCommand, (void**)pObjectWithSelection.GetAddressOf());
+			pObjectWithSelection.Get()->SetSelection(pShellItemArray.Get());
+
+			pExecuteCommand.Get()->Execute();
+		}
+
+		internal static void SetVolumeLabel()
+		{
+			HRESULT hr = default;
+
+			ComPtr<IMountPointRename> pMountPointRename = default;
+			Guid CLSID_MountPointRename = new("60173D16-A550-47f0-A14B-C6F9E4DA0831");
+			Guid IID_IMountPointRename = new("92F8D886-AB61-4113-BD4F-2E894397386F");
+
+			BIND_OPTS3 bo = default;
+			bo.Base.Base.cbStruct = (uint)sizeof(BIND_OPTS3);
+			bo.Base.dwClassContext = (uint)CLSCTX.CLSCTX_LOCAL_SERVER;
+			fixed (char* pMonikerName = "Elevation:Administrator!new:{60173D16-A550-47f0-A14B-C6F9E4DA0831}")
+				hr = PInvoke.CoGetObject(pMonikerName, null, &IID_IMountPointRename, (void**)pMountPointRename.GetAddressOf());
+
+			// The same usage as SetVolumeLabel function (the lpRootPathName must include a trailing backslash)
+			fixed (char* lpRootPathName = "C:\\") fixed(char* lpVolumeName = "Local Disk x2")
+				hr = pMountPointRename.Get()->Rename(lpRootPathName, lpVolumeName);
+		}
+
+		internal static void ParseShellUrl()
+		{
+			Guid CLSID_ShellUrl = new("4BEC2015-BFA1-42FA-9C0C-59431BBE880E");
+			Guid IID_IShellUrl = new("00000000-0000-0000-C000-000000000046");
+			Guid IID_IShellUrl2 = new("4f33718d-bae1-4f9b-96f2-d2a16e683346");
+			ComPtr<IShellUrl> pShellUrl = default;
+			ComPtr<IShellUrl> pShellUrl2 = default;
+
+			PInvoke.CoCreateInstance(&CLSID_ShellUrl, null, CLSCTX.CLSCTX_INPROC_SERVER, &IID_IShellUrl, (void**)pShellUrl.GetAddressOf());
+
+			pShellUrl.Get()->QueryInterface(&IID_IShellUrl2, (void**)pShellUrl2.GetAddressOf());
+		}
+
+		internal static void EnumerateOpenWithMenuItems()
+		{
+			using ComPtr<IContextMenu> pOpenWithContextMenu = default;
+			using ComPtr<IShellExtInit> pShellExtInit = default;
+
+			PInvoke.CoCreateInstance(
+				CLSID.CLSID_OpenWithMenu,
+				null,
+				CLSCTX.CLSCTX_INPROC_SERVER,
+				IID.IID_IContextMenu,
+				(void**)pOpenWithContextMenu.GetAddressOf());
+
+			pOpenWithContextMenu.Get()->QueryInterface(
+				IID.IID_IShellExtInit,
+				(void**)pShellExtInit.GetAddressOf());
+
+			// The 2nd parameter cannot be null.
+			// The IDataObject instance has to indicate to an IShellItem (so can be obtained via SHGetItemFromDataObject)
+			pShellExtInit.Get()->Initialize(null, null, HKEY.Null);
 		}
 	}
 }

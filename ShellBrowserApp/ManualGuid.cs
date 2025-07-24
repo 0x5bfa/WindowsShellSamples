@@ -12,6 +12,9 @@ namespace Windows.Win32
 		[GuidRVAGen.Guid("000214E4-0000-0000-C000-000000000046")]
 		public static partial Guid* IID_IContextMenu { get; }
 
+		[GuidRVAGen.Guid("000214F4-0000-0000-C000-000000000046")]
+		public static partial Guid* IID_IContextMenu2 { get; }
+
 		[GuidRVAGen.Guid("70629033-E363-4A28-A567-0DB78006E6D7")]
 		public static partial Guid* IID_IEnumShellItems { get; }
 
@@ -38,6 +41,9 @@ namespace Windows.Win32
 
 		[GuidRVAGen.Guid("000214E8-0000-0000-C000-000000000046")]
 		public static partial Guid* IID_IShellExtInit { get; }
+
+		[GuidRVAGen.Guid("0000010E-0000-0000-C000-000000000046")]
+		public static partial Guid* IID_IDataObject { get; }
 	}
 
 	public static unsafe partial class CLSID

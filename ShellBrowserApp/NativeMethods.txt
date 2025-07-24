@@ -235,3 +235,5 @@ CoInitializeEx
 BIND_OPTS3
 ICancelMethodCalls
 SHCreateDataObject
+ILFindLastID
+ILRemoveLastID

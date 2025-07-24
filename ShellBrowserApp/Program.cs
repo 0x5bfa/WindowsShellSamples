@@ -468,25 +468,63 @@ namespace ShellBrowserApp
 
 		internal static void EnumerateOpenWithMenuItems()
 		{
+			HRESULT hr = default;
+
 			using ComPtr<IContextMenu> pOpenWithContextMenu = default;
+			using ComPtr<IContextMenu2> pOpenWithContextMenu2 = default;
 			using ComPtr<IShellExtInit> pShellExtInit = default;
+			using ComPtr<IShellItem> pShellItem = default;
+			using ComPtr<IShellItem> pParentFolderShellItem = default;
+			using ComPtr<IDataObject> pDataObject = default;
+			ComHeapPtr<ITEMIDLIST> pParentAbsolutePidl = default;
+			ComHeapPtr<ITEMIDLIST> pThisAbsolutePidl = default;
+			ComHeapPtr<ITEMIDLIST> pThisRelativePidl = default;
 
-			PInvoke.CoCreateInstance(
-				CLSID.CLSID_OpenWithMenu,
-				null,
-				CLSCTX.CLSCTX_INPROC_SERVER,
-				IID.IID_IContextMenu,
-				(void**)pOpenWithContextMenu.GetAddressOf());
+			PInvoke.CoCreateInstance(CLSID.CLSID_OpenWithMenu, null, CLSCTX.CLSCTX_INPROC_SERVER, IID.IID_IContextMenu, (void**)pOpenWithContextMenu.GetAddressOf());
+			hr = pOpenWithContextMenu.Get()->QueryInterface(IID.IID_IShellExtInit, (void**)pShellExtInit.GetAddressOf());
+			hr = pOpenWithContextMenu.Get()->QueryInterface(IID.IID_IContextMenu2, (void**)pOpenWithContextMenu2.GetAddressOf());
+			fixed (char* pszPath = "D:\\Branding.svg") hr = PInvoke.SHCreateItemFromParsingName(pszPath, null, IID.IID_IShellItem, (void**)pShellItem.GetAddressOf());
 
-			pOpenWithContextMenu.Get()->QueryInterface(
-				IID.IID_IShellExtInit,
-				(void**)pShellExtInit.GetAddressOf());
+			// Get the absolute PIDL of the parent folder
+			pShellItem.Get()->GetParent(pParentFolderShellItem.GetAddressOf());
+			PInvoke.SHGetIDListFromObject((IUnknown*)pParentFolderShellItem.Get(), pParentAbsolutePidl.GetAddressOf());
 
-			//PInvoke.SHCreateDataObject();
+			// Get the relative PIDL of the current item
+			PInvoke.SHGetIDListFromObject((IUnknown*)pShellItem.Get(), pThisAbsolutePidl.GetAddressOf());
+			pThisRelativePidl.Attach(PInvoke.ILFindLastID(pThisAbsolutePidl.Get()));
 
-			// The 2nd parameter must not be null.
-			// The IDataObject instance must indicate to an IShellItem (so can be obtained via SHGetItemFromDataObject)
-			pShellExtInit.Get()->Initialize(null, null, HKEY.Null);
+			hr = PInvoke.SHCreateDataObject(pParentAbsolutePidl.Get(), 1U, pThisRelativePidl.GetAddressOf(), null, IID.IID_IDataObject, (void**)pDataObject.GetAddressOf());
+
+			// The 2nd parameter must not be null, others aren't used.
+			hr = pShellExtInit.Get()->Initialize(null, pDataObject.Get(), HKEY.Null);
+
+			// Inserts "New (&W)"
+			HMENU hMenu = PInvoke.CreatePopupMenu();
+			hr = pOpenWithContextMenu.Get()->QueryContextMenu(hMenu, 0, 1, 256, 0);
+
+			// Invokes CNewMenu::_InitMenuPopup(), which populates the hSubMenu
+			HMENU hSubMenu = PInvoke.GetSubMenu(hMenu, 0);
+			hr = pOpenWithContextMenu2.Get()->HandleMenuMsg(PInvoke.WM_INITMENUPOPUP, (WPARAM)(nuint)hSubMenu.Value, 0);
+
+			uint dwCount = unchecked((uint)PInvoke.GetMenuItemCount(hSubMenu));
+			if (dwCount is unchecked((uint)-1)) return;
+
+			// Enumerates and populates the list
+			for (uint dwIndex = 0U; dwIndex < dwCount; dwIndex++)
+			{
+				MENUITEMINFOW mii = default;
+				mii.cbSize = (uint)sizeof(MENUITEMINFOW);
+				mii.fMask = MENU_ITEM_MASK.MIIM_STRING | MENU_ITEM_MASK.MIIM_ID | MENU_ITEM_MASK.MIIM_STATE;
+				mii.dwTypeData = (char*)NativeMemory.Alloc(256U);
+				mii.cch = 256;
+
+				if (PInvoke.GetMenuItemInfo(hSubMenu, dwIndex, true, &mii))
+				{
+					Console.WriteLine($"{mii.wID}: \"{mii.dwTypeData.ToString()}\" ({mii.fState})");
+				}
+
+				NativeMemory.Free(mii.dwTypeData);
+			}
 		}
 	}
 }

@@ -237,3 +237,6 @@ ICancelMethodCalls
 SHCreateDataObject
 ILFindLastID
 ILRemoveLastID
+IFolderView
+_SHCONTF
+SHCreateShellFolderView

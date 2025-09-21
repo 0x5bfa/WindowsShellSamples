@@ -39,7 +39,7 @@ namespace ShellBrowserApp
 
 			PInvoke.CoInitializeEx(null, COINIT.COINIT_APARTMENTTHREADED);
 
-			EnumerateOpenWithMenuItems();
+			GetFolderView();
 
 			PInvoke.CoUninitialize();
 
@@ -524,6 +524,49 @@ namespace ShellBrowserApp
 				}
 
 				NativeMemory.Free(mii.dwTypeData);
+			}
+		}
+
+		internal static void GetFolderView()
+		{
+			HRESULT hr = default;
+
+			using ComPtr<IShellItem> pShellItem = default;
+			fixed (char* pszPath = "C:\\Users\\onein\\Desktop")
+				hr = PInvoke.SHCreateItemFromParsingName(pszPath, null, IID.IID_IShellItem, (void**)pShellItem.GetAddressOf());
+			if (hr.Failed) return;
+
+			using ComPtr<IShellFolder> pShellFolder = default;
+			Guid IID_IShellFolder = IShellFolder.IID_Guid;
+			Guid BHID_SFObject = PInvoke.BHID_SFObject;
+			hr = pShellItem.Get()->BindToHandler(null, &BHID_SFObject, &IID_IShellFolder, (void**)pShellFolder.GetAddressOf());
+			if (hr.Failed) return;
+
+			using ComPtr<IShellView> pShellView = default;
+			Guid IID_IShellView = IShellView.IID_Guid;
+			SFV_CREATE sfvc = default;
+			sfvc.pshf = pShellFolder.Get();
+			//hr = pShellFolder.Get()->CreateViewObject(default, &IID_IShellView, (void**)pShellView.GetAddressOf());
+			hr = PInvoke.SHCreateShellFolderView(&sfvc, pShellView.GetAddressOf());
+			if (hr.Failed) return;
+
+			using ComPtr<IFolderView> pFolderView = default;
+			Guid IID_IFolderView = IFolderView.IID_Guid;
+			hr = pShellView.Get()->QueryInterface(&IID_IFolderView, (void**)pFolderView.GetAddressOf());
+			if (hr.Failed) return;
+
+			using ComPtr<IEnumIDList> pEnumIDList = default;
+			pShellFolder.Get()->EnumObjects(HWND.Null, (uint)(_SHCONTF.SHCONTF_NONFOLDERS | _SHCONTF.SHCONTF_SHAREABLE), pEnumIDList.GetAddressOf());
+
+			for (ComHeapPtr<ITEMIDLIST> pChildPidl = default;
+				pEnumIDList.Get()->Next(1, pChildPidl.GetAddressOf(), null) == HRESULT.S_OK;
+				pChildPidl.Dispose())
+			{
+				System.Drawing.Point point = default;
+				hr = pFolderView.Get()->GetItemPosition(pChildPidl.Get(), &point);
+				if (hr.Failed) return;
+
+				Console.WriteLine($"({point.X}, {point.Y})");
 			}
 		}
 	}

@@ -101,37 +101,7 @@ namespace ShellBrowserApp
 
 		internal static void EnumerateWindows11ContextMenuItems()
 		{
-			// FOLDERTYPEID_Music
-			Guid folderId = new("94D6DDCC-4A68-4175-A374-BD584A510B78");
-
-			Guid IID_IEnumExplorerCommand = IEnumExplorerCommand.IID_Guid;
-			using ComPtr<IFolderTypeDescription> pFolderTypeDescription = default;
-			using ComPtr<IExplorerCommandProvider> pExplorerCommandProvider = default;
-			using ComPtr<IEnumExplorerCommand> pEnumExplorerCommand = default;
-
-			// Call an undocumented function and retrieve an undocumented COM object
-			var hr = (HRESULT)PInvoke.SHGetFolderTypeDescription(
-				&folderId,
-				(Guid*)Unsafe.AsPointer(ref Unsafe.AsRef(in IFolderTypeDescription.Guid)),
-				(void**)pFolderTypeDescription.GetAddressOf());
-
-			// Get the command provider
-			hr = pFolderTypeDescription.Get()->GetExplorerCommandProvider(pExplorerCommandProvider.GetAddressOf());
-
-			// Get the enumerator
-			hr = pExplorerCommandProvider.Get()->GetCommands(
-				null,
-				&IID_IEnumExplorerCommand,
-				(void**)pEnumExplorerCommand.GetAddressOf());
-
-			// Enumerate commands
-			ComPtr<IExplorerCommand> pExplorerCommand = default;
-			while (pEnumExplorerCommand.Get()->Next(1, pExplorerCommand.GetAddressOf(), null).Succeeded)
-			{
-				PWSTR pszName = default;
-				pExplorerCommand.Get()->GetTitle(null, &pszName);
-				Console.WriteLine(pszName.ToString());
-			}
+			
 		}
 
 		internal static void EnumerateLogicalDrives()
